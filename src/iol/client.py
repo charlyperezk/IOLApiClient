@@ -1,13 +1,12 @@
-import asyncio
-from dataclasses import dataclass, field
-from datetime import datetime
-from typing import Any, Dict, List, Optional
+from dataclasses import dataclass
+from typing import List
 
 from src.seedwork.interfaces import ExtractionService
 
-from iol.entities import Option, TickerCotization
-from iol.resources import (
-    TickerCotizationRequest,
+from src.iol.enums import Country
+from src.iol.entities import Option
+from src.iol.resources import (
+    MeRequest,
     GetAllCotizationsRequest,
 )
 
@@ -17,10 +16,17 @@ class IOLClient:
     service: ExtractionService
     identifier: str
 
-    async def _fetch_all_options(self, market: str = "argentina") -> List[Option]:
+    async def fetch_me(self) -> ...:
         extraction = await self.service.extract(
             identifier=self.identifier,
-            request=GetAllCotizationsRequest.new(market=market),
+            request=MeRequest.new(),
+        )
+        return extraction
+
+    async def fetch_all_options(self, country: Country = Country.ARG) -> List[Option]:
+        extraction = await self.service.extract(
+            identifier=self.identifier,
+            request=GetAllCotizationsRequest.new(country=country),
         )
         
         cotizations = extraction.data.get("cotizacion") or []

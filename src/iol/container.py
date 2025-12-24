@@ -10,7 +10,8 @@ from src.seedwork.strategies.paging import GeneratedPagingExtraction, PagingRequ
 from src.seedwork.repositories import InMemoryExtractionRepo
 
 from src.iol.auth.account_token_provider import IOLTokenProvider
-from src.iol.constants import HOST
+from src.iol.client import IOLClient
+from src.iol.constants import IDENTIFIER
 
 
 httpx_client = httpx.Client(timeout=10)
@@ -30,3 +31,5 @@ scroller = GeneratedScrolledExtraction(req_builder=scroll_req_builder)
 
 paging_req_builder = PagingRequestBuilder()
 paginator = GeneratedPagingExtraction(req_builder=paging_req_builder)
+
+iol_client=IOLClient(service=service, identifier=IDENTIFIER)

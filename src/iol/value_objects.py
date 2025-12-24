@@ -17,7 +17,7 @@ class BookEntry:
     ask_size: float
 
     @classmethod
-    def from_payload(cls, payload: Dict[str, Any]) -> Optional["BookEntry"]:
+    def from_payload(cls, payload: Dict[str, Any]) -> "BookEntry":
         if not isinstance(payload, dict):
             return None
 
