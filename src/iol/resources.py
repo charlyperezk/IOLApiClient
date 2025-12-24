@@ -7,6 +7,7 @@ from src.iol.enums import Country, InstrumentType, Market
 
 TOKEN_PATH = HOST + "/token"
 ME_PATH = API_ROOT_V2 + "/datos-perfil"
+PORTFOLIO_PATH = API_ROOT_V2 + "/portafolio/{country}"
 TICKER_COTIZATION_PATH = API_ROOT_V2 + "/{market}/Titulos/{symbol}/CotizacionDetalle"
 ALL_COTIZATIONS_PATH = API_ROOT_V2 + "/Cotizaciones/{symbol}/{country}/Todos"
 
@@ -15,6 +16,12 @@ class MeRequest(Request):
     @classmethod
     def new(cls) -> "Request":        
         return super().create(ME_PATH, method=RequestMethod.GET)
+
+
+class PortfolioRequest(Request):
+    @classmethod
+    def new(cls, country: Country) -> "Request":
+        return super().create(PORTFOLIO_PATH.format(country=country), method=RequestMethod.GET)
 
 
 class AuthenticateRequest(Request):

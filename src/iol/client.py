@@ -7,6 +7,7 @@ from src.iol.enums import Country
 from src.iol.entities import Option
 from src.iol.resources import (
     MeRequest,
+    PortfolioRequest,
     GetAllCotizationsRequest,
 )
 
@@ -20,6 +21,13 @@ class IOLClient:
         extraction = await self.service.extract(
             identifier=self.identifier,
             request=MeRequest.new(),
+        )
+        return extraction
+
+    async def fetch_portfolio(self, country: Country = Country.ARG) -> ...:
+        extraction = await self.service.extract(
+            identifier=self.identifier,
+            request=PortfolioRequest.new(country=country),
         )
         return extraction
 
