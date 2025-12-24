@@ -29,4 +29,4 @@ class APIResponse:
 
     @property
     def sucess(self) -> bool:
-        return self.status_code == 200
+        return self.status_code in {200, 201, 204}

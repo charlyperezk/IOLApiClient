@@ -202,3 +202,123 @@ class TickerCotization(MarketQuote):
             adjusted_price=adjusted_price,
             open_interest=open_interest,
         )
+
+
+@dataclass
+class Title:
+    symbol: str
+    description: Optional[str]
+    country: Optional[str]
+    market: Optional[str]
+    asset_type: Optional[str]
+    term: Optional[str]
+    currency: Optional[str]
+
+    @classmethod
+    def from_payload(cls, payload: Dict[str, Any]) -> "Title":
+        return cls(
+            symbol=payload.get("simbolo") or payload.get("symbol") or "",
+            description=payload.get("descripcion"),
+            country=payload.get("pais"),
+            market=payload.get("mercado"),
+            asset_type=payload.get("tipo"),
+            term=payload.get("plazo"),
+            currency=payload.get("moneda"),
+        )
+
+
+@dataclass
+class Asset:
+    quantity: float
+    committed: Optional[float]
+    points_variation: Optional[float]
+    daily_variation: Optional[float]
+    last_price: Optional[float]
+    average_cost: Optional[float]
+    profit_pct: Optional[float]
+    profit_amount: Optional[float]
+    value: Optional[float]
+    title: Title
+    parking: Optional[Any]
+    raw: Dict[str, Any] = field(default_factory=dict, repr=False)
+
+    @classmethod
+    def from_payload(cls, payload: Dict[str, Any]) -> "Asset":
+        return cls(
+            quantity=float(payload.get("cantidad") or 0.0),
+            committed=_parse_optional_float(payload.get("comprometido")),
+            points_variation=_parse_optional_float(payload.get("puntosVariacion")),
+            daily_variation=_parse_optional_float(payload.get("variacionDiaria")),
+            last_price=_parse_optional_float(payload.get("ultimoPrecio")),
+            average_cost=_parse_optional_float(payload.get("ppc")),
+            profit_pct=_parse_optional_float(payload.get("gananciaPorcentaje")),
+            profit_amount=_parse_optional_float(payload.get("gananciaDinero")),
+            value=_parse_optional_float(payload.get("valorizado")),
+            title=Title.from_payload(payload.get("titulo") or {}),
+            parking=payload.get("parking"),
+            raw=payload,
+        )
+
+    @property
+    def market_value(self) -> float:
+        return self.quantity * (self.last_price or 0.0)
+
+
+@dataclass
+class Portfolio:
+    country: str
+    assets: List[Asset]
+    raw: Dict[str, Any] = field(default_factory=dict, repr=False)
+
+    @classmethod
+    def from_payload(cls, payload: Dict[str, Any]) -> "Portfolio":
+        return cls(
+            country=payload.get("pais") or "",
+            assets=[
+                Asset.from_payload(item)
+                for item in payload.get("activos") or []
+                if isinstance(item, dict)
+            ],
+            raw=payload,
+        )
+
+    @property
+    def total_value(self) -> float:
+        return sum(asset.value or asset.market_value for asset in self.assets)
+
+
+@dataclass
+class Account:
+    first_name: str
+    last_name: str
+    account_number: Optional[str]
+    dni: Optional[str]
+    tax_id: Optional[str]
+    gender: Optional[str]
+    investor_profile: Optional[str]
+    notify_tax_update: bool
+    notify_investor_test: bool
+    regret_withdrawal: bool
+    email: Optional[str]
+    account_open: bool
+    accept_terms: bool
+    accept_app_terms: bool
+
+    @classmethod
+    def from_payload(cls, payload: Dict[str, Any]) -> "Account":
+        return cls(
+            first_name=payload.get("nombre") or "",
+            last_name=payload.get("apellido") or "",
+            account_number=payload.get("numeroCuenta"),
+            dni=payload.get("dni"),
+            tax_id=payload.get("cuitCuil"),
+            gender=payload.get("sexo"),
+            investor_profile=payload.get("perfilInversor"),
+            notify_tax_update=bool(payload.get("actualizarDDJJ")),
+            notify_investor_test=bool(payload.get("actualizarTestInversor")),
+            regret_withdrawal=bool(payload.get("esBajaArrepentimiento")),
+            email=payload.get("email"),
+            account_open=bool(payload.get("cuentaAbierta")),
+            accept_terms=bool(payload.get("actualizarTyC")),
+            accept_app_terms=bool(payload.get("actualizarTyCApp")),
+        )

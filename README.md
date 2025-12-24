@@ -4,7 +4,6 @@ Cliente para consumir la API de InvertirOnline. Ya tiene:
 
 - Caché de accesos administrada por `SQLiteAccessTokenRepo`, `SQLiteExtractionRepo` y un helper central (`src/seedwork/sqlite_db.py`) que comparte la misma base `db.sqlite`.
 - Servicio de autenticación estándar (`StandardAuthService`) emparejado con extractores que gestionan refresh/renew automaticos y token storage.
-- Helpers para generar requests (`iol/tickers`) y un cliente HTTP (`HttpxClientAdapter`) listos para nuevos endpoints.
 
 ## Cómo ejecutar
 
