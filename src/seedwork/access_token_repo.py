@@ -1,20 +1,22 @@
-import sqlite3
 from datetime import datetime
+import sqlite3
 from pathlib import Path
 from typing import Optional, Union
 
 from .interfaces import AccessTokenRepo
+from .sqlite_db import get_shared_connection
 from .value_objects import AccessToken
 
 
 class SQLiteAccessTokenRepo(AccessTokenRepo[str]):
     """SQLite-backed repository for caching access tokens per identifier."""
 
-    def __init__(self, db_path: Optional[Union[str, Path]] = None) -> None:
-        path = Path(db_path) if db_path else Path(__file__).resolve().parent.parent / "access_tokens.sqlite"
-        path.parent.mkdir(parents=True, exist_ok=True)
-        self._connection = sqlite3.connect(str(path), check_same_thread=False)
-        self._connection.row_factory = sqlite3.Row
+    def __init__(
+        self,
+        db_path: Optional[Union[str, Path]] = None,
+        connection: Optional[sqlite3.Connection] = None,
+    ) -> None:
+        self._connection = connection or get_shared_connection(db_path)
         self._ensure_table()
 
     def _ensure_table(self) -> None:

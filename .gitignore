@@ -1,6 +1,6 @@
 __pycache__
 .env
 options.json
-src/access_tokens.sqlite
 src/iol/options_monitor.py
 main.py
+src/db.sqlite
