@@ -91,7 +91,7 @@ class Option(MarketQuote):
 
     @classmethod
     def from_payload(cls, payload: Dict[str, Any]) -> "Option":
-        symbol = payload.get("simbolo") or payload.get("symbol")
+        symbol = payload.get("simbolo")
         if not symbol:
             raise ValueError("Can't find symbol")
 

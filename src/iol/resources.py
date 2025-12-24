@@ -56,11 +56,11 @@ class TickerCotizationRequest(Request):
 
 class GetAllCotizationsRequest(Request):
     @classmethod
-    def new(cls, country: Country = Country.ARG, instrument: InstrumentType = InstrumentType.OPTIONS) -> "Request":
+    def new(cls, country: Country = Country.ARG, instrument_type: InstrumentType = InstrumentType.OPTIONS) -> "Request":
         return super().create(
             ALL_COTIZATIONS_PATH.format(symbol="no-required", country=country),
             params={
-                "cotizacionInstrumentoModel.instrumento": instrument,
+                "cotizacionInstrumentoModel.instrumento": instrument_type,
                 "cotizacionInstrumentoModel.pais": country
             },
             method=RequestMethod.GET,

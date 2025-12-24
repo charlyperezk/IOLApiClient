@@ -3,7 +3,7 @@ from typing import List
 
 from src.seedwork.interfaces import ExtractionService
 
-from src.iol.enums import Country
+from src.iol.enums import Country, InstrumentType
 from src.iol.entities import Account, Option, Portfolio
 from src.iol.resources import (
     MeRequest,
@@ -34,8 +34,7 @@ class IOLClient:
     async def fetch_all_options(self, country: Country = Country.ARG) -> List[Option]:
         extraction = await self.service.extract(
             identifier=self.identifier,
-            request=GetAllCotizationsRequest.new(country=country),
+            request=GetAllCotizationsRequest.new(country=country, instrument_type=InstrumentType.OPTIONS),
         )
-        
-        cotizations = extraction.data.get("cotizacion") or []
+        cotizations = extraction.data.get("titulos") or []
         return [Option.from_payload(option) for option in cotizations]
