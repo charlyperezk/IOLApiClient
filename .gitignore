@@ -4,4 +4,3 @@ options.json
 src/iol/options_monitor.py
 main.py
 src/db.sqlite
-main.ipynb
