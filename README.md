@@ -9,4 +9,4 @@ Cliente para consumir la API de InvertirOnline. Ya tiene:
 
 1. Configurar .env con `IOL_USERNAME` y `IOL_PASSWORD`:
 2. La primera ejecución pobla `db.sqlite` con tokens.
-3. Cada extracción quedará almacenada en 
+3. La entidad extraction porta información de cada interacción con la API de iol, permite una robusta trazabilidad. Estas se irán almacenando en una tabla "extractions"
