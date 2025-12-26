@@ -8,7 +8,7 @@ class StandardExtractionService(ExtractionService):
     extractor: Extractor
     extraction_repo: ExtractionRepo
 
-    async def extract(self, identifier: str, request: Request) -> Extraction:
-        extraction = self.extractor.auth_extract(identifier, request)
+    async def extract(self, request: Request) -> Extraction:
+        extraction = self.extractor.extract(request)
         self.extraction_repo.save(extraction)
         return extraction

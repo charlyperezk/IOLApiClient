@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 from datetime import datetime
+import os
 from typing import Dict, Any, List, Optional
 
 from .value_objects import APIResponse, AccessToken
@@ -10,6 +11,7 @@ from .enums import ExtractionStatus, ExtractionType, RequestMethod
 class Request:
     url: str
     method: RequestMethod
+    identity: Optional[str] = None
     extraction_type: ExtractionType = ExtractionType.REGULAR
     retries: int = 3    
     headers: Dict[str, Any] = field(default_factory=dict)
@@ -23,6 +25,7 @@ class Request:
         cls,
         url: str,
         *,
+        identity: Optional[str] = None,
         token: Optional[AccessToken] = None,
         method: RequestMethod = RequestMethod.GET,
         headers: Optional[Dict[str, Any]] = None,
@@ -35,9 +38,12 @@ class Request:
         if token:
             headers.update(token.as_header())
         params = dict(params) if params else {}
-        
+
+        _identity = identity or os.getenv("DEFAULT_IDENTITY", None)
+
         return Request(
             url=url,
+            identity=_identity,
             method=method,
             headers=headers,
             json=json,
@@ -52,6 +58,7 @@ class Request:
         
         return Request(
             url=self.url,
+            identity=self.identity,
             method=self.method,
             headers=headers,
             json=self.json,

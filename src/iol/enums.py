@@ -12,3 +12,8 @@ class InstrumentType(StrEnum):
 
 class Market(StrEnum):
     BCBA = "bCBA"
+
+
+class OptionType(StrEnum):
+    CALL = "CALL"
+    PUT = "PUT"

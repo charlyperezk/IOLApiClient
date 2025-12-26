@@ -1,15 +1,14 @@
 from src.seedwork.entities import Request
-from src.seedwork.enums import ExtractionType, RequestMethod
+from src.seedwork.enums import RequestMethod
 
-from src.iol.constants import HOST, API_ROOT_V2
 from src.iol.enums import Country, InstrumentType, Market
-
-
-TOKEN_PATH = HOST + "/token"
-ME_PATH = API_ROOT_V2 + "/datos-perfil"
-PORTFOLIO_PATH = API_ROOT_V2 + "/portafolio/{country}"
-TICKER_COTIZATION_PATH = API_ROOT_V2 + "/{market}/Titulos/{symbol}/CotizacionDetalle"
-ALL_COTIZATIONS_PATH = API_ROOT_V2 + "/Cotizaciones/{symbol}/{country}/Todos"
+from src.iol.constants import (
+    ALL_COTIZATIONS_PATH, 
+    ME_PATH, 
+    PORTFOLIO_PATH, 
+    TICKER_COTIZATION_PATH, 
+    TOKEN_PATH
+)
 
 
 class MeRequest(Request):

@@ -37,8 +37,7 @@ class Extractor(Protocol):
     client: HttpClient
     auth_service: AuthService[str]
 
-    def extract(self, *args, **kwargs) -> Extraction: ...
-    def auth_extract(self, *args, **kwargs) -> Extraction: ...
+    def extract(self, request: Request) -> Extraction: ...
 
 
 class ExtractionRepo(Protocol):

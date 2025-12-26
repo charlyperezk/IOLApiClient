@@ -17,7 +17,7 @@ class IOLTokenProvider(AccessTokenProvider[str]):
     def _get_credentials(self, identifier: str) -> Tuple[str, str]:
         username = ACCOUNTS.get(identifier, None)
         password = PASSWORDS.get(identifier, None)
-        
+
         if not username or not password:
             raise ValueError("Account not found")
 
