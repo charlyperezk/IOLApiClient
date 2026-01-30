@@ -44,18 +44,25 @@ prev_totals as (
 ),
 daily_moves as (
     select
-        report_date,
-        symbol,
-        daily_variation,
+        a.report_date,
+        a.symbol,
+        a.daily_variation,
+        case
+            when t.total_value is not null and t.total_value != 0
+                then (a.value / t.total_value) * 100.0
+            else null
+        end as participation_pct,
         row_number() over (
-            partition by report_date
+            partition by a.report_date
             order by daily_variation desc nulls last
         ) as rn_gainers,
         row_number() over (
-            partition by report_date
+            partition by a.report_date
             order by daily_variation asc nulls last
         ) as rn_losers
-    from assets
+    from assets a
+    join totals t
+      on t.report_date = a.report_date
 ),
 gainers as (
     select
@@ -63,7 +70,8 @@ gainers as (
         jsonb_agg(
             jsonb_build_object(
                 'symbol', symbol,
-                'daily_variation', daily_variation
+                'daily_variation', daily_variation,
+                'participation_pct', participation_pct
             )
             order by daily_variation desc nulls last
         ) as top_gainers
@@ -77,7 +85,8 @@ losers as (
         jsonb_agg(
             jsonb_build_object(
                 'symbol', symbol,
-                'daily_variation', daily_variation
+                'daily_variation', daily_variation,
+                'participation_pct', participation_pct
             )
             order by daily_variation asc nulls last
         ) as top_losers
