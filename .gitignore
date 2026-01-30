@@ -6,3 +6,4 @@ main.py
 src/db.sqlite
 options_analysis.ipynb
 example.ipynb
+src/meli/

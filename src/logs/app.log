@@ -1,0 +1,2 @@
+2026-01-30 00:51:35,205 [WARNING] src.seedwork.auth_service: Token refresh failed for TEST: Refresh request failed with status 401
+2026-01-30 09:48:33,582 [WARNING] src.seedwork.auth_service: Token refresh failed for TEST: Refresh request failed with status 401

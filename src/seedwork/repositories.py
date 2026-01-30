@@ -1,16 +1,19 @@
-from datetime import datetime
 import json
-import sqlite3
-from pathlib import Path
-from typing import Any, List, Optional, Sequence, Union
+from typing import Any, Callable, Dict, List, Optional, Sequence
 
+from sqlalchemy import Column, DateTime, Integer, JSON, String
+from sqlalchemy.orm import Session
+
+from .database import Base
 from .entities import Attempt, Extraction
 from .interfaces import ExtractionRepo
-from .sqlite_db import get_shared_connection
 
 
-def _serialize(obj: Any) -> str:
-    return json.dumps(obj, default=str, ensure_ascii=False)
+def _normalize_json(obj: Any) -> Any:
+    if obj is None:
+        return None
+    serialized = json.dumps(obj, default=str, ensure_ascii=False)
+    return json.loads(serialized)
 
 
 class InMemoryExtractionRepo(ExtractionRepo):
@@ -23,52 +26,54 @@ class InMemoryExtractionRepo(ExtractionRepo):
         self.saved.append(extraction)
         return extraction
 
+    def save_many(self, extractions: List[Extraction]) -> List[Extraction]:
+        self.saved.extend(extractions)
+        return extractions
 
-class SQLiteExtractionRepo(ExtractionRepo):
-    def __init__(
-        self,
-        db_path: Optional[Union[str, Path]] = None,
-        connection: Optional[sqlite3.Connection] = None,
-    ) -> None:
-        self._connection = connection or get_shared_connection(db_path)
-        self._ensure_table()
 
-    def _ensure_table(self) -> None:
-        self._connection.execute(
-            """
-            CREATE TABLE IF NOT EXISTS extractions (
-                id INTEGER PRIMARY KEY,
-                identifier TEXT,
-                url TEXT,
-                method TEXT,
-                status TEXT,
-                success INTEGER,
-                retries INTEGER,
-                fetched_at TEXT,
-                created_at TEXT,
-                headers TEXT,
-                params TEXT,
-                json_body TEXT,
-                attempts TEXT,
-                response TEXT
-            )
-            """
-        )
-        self._connection.commit()
+class ExtractionModel(Base):
+    __tablename__ = "extractions"
 
-    def _serialize_attempts(self, attempts: Sequence[Attempt]) -> str:
+    id = Column(Integer, primary_key=True)
+    identifier = Column(String)
+    url = Column(String, nullable=False)
+    method = Column(String, nullable=False)
+    status = Column(String, nullable=False)
+    success = Column(Integer, nullable=False)
+    retries = Column(Integer, nullable=False)
+    fetched_at = Column(DateTime, nullable=False)
+    created_at = Column(DateTime, nullable=False)
+    headers = Column(JSON)
+    params = Column(JSON)
+    json_body = Column(JSON)
+    attempts = Column(JSON)
+    response = Column(JSON)
+    module = Column(String)
+    reference_id = Column(String)
+
+
+class SQLAlchemyExtractionRepo(ExtractionRepo):
+    def __init__(self, session_factory: Callable[[], Session]) -> None:
+        self._session_factory = session_factory
+
+    def _serialize_attempts(self, attempts: Sequence[Attempt]) -> List[Dict[str, Any]]:
         serialized = []
         for attempt in attempts:
+            content = attempt.response.content
+            if isinstance(content, bytes):
+                content_value = content.decode("utf-8", errors="replace")
+            else:
+                content_value = str(content)
             serialized.append(
                 {
                     "fetched_at": attempt.fetched_at.isoformat(),
                     "status_code": attempt.response.status_code,
-                    "content": attempt.response.content,
+                    "content": content_value,
                 }
             )
-        return _serialize(serialized)
+        return serialized
 
-    def save(self, extraction: Extraction) -> Extraction:
+    def _build_model(self, extraction: Extraction) -> ExtractionModel:
         request = extraction.request
         last_attempt = extraction.attempts[-1]
         response_payload = {
@@ -76,39 +81,37 @@ class SQLiteExtractionRepo(ExtractionRepo):
             "content": last_attempt.response.content,
         }
 
-        self._connection.execute(
-            """
-            INSERT INTO extractions (
-                identifier,
-                url,
-                method,
-                status,
-                success,
-                retries,
-                fetched_at,
-                created_at,
-                headers,
-                params,
-                json_body,
-                attempts,
-                response
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                getattr(request, "identifier", None) or None,
-                request.url,
-                request.method.value,
-                extraction.status.value,
-                1 if extraction.success else 0,
-                extraction.retries,
-                last_attempt.fetched_at.isoformat(),
-                request.created_at.isoformat(),
-                _serialize(request.headers),
-                _serialize(request.params),
-                _serialize(request.json),
-                self._serialize_attempts(extraction.attempts),
-                _serialize(response_payload),
-            ),
+        return ExtractionModel(
+            identifier=getattr(request, "identity", None),
+            url=request.url,
+            method=request.method.value,
+            status=extraction.status.value,
+            success=1 if extraction.success else 0,
+            retries=extraction.retries,
+            fetched_at=last_attempt.fetched_at,
+            created_at=request.created_at,
+            headers=_normalize_json(request.headers),
+            params=_normalize_json(request.params),
+            json_body=_normalize_json(request.json),
+            attempts=self._serialize_attempts(extraction.attempts),
+            response=_normalize_json(response_payload),
+            module=request.module,
+            reference_id=request.reference_id,
         )
-        self._connection.commit()
+
+    def save(self, extraction: Extraction) -> Extraction:
+        model = self._build_model(extraction)
+        with self._session_factory() as session:
+            session.add(model)
+            session.commit()
         return extraction
+
+    def save_many(self, extractions: List[Extraction]) -> List[Extraction]:
+        if not extractions:
+            return []
+
+        models = [self._build_model(extraction) for extraction in extractions]
+        with self._session_factory() as session:
+            session.add_all(models)
+            session.commit()
+        return extractions
