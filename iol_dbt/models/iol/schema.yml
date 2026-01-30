@@ -24,3 +24,31 @@ models:
       - name: report_date
         tests:
           - not_null
+
+  - name: mart_iol_portfolio_intraday_high
+    description: "Highest portfolio valuation per day with timestamp."
+    columns:
+      - name: report_date
+        tests:
+          - not_null
+      - name: high_at
+        tests:
+          - not_null
+
+  - name: mart_iol_asset_highs
+    description: "All-time high valuation per symbol and latest current valuation."
+    columns:
+      - name: symbol
+        tests:
+          - not_null
+
+  - name: mart_iol_asset_daily_allocation
+    description: "Daily participation of each asset in total portfolio value."
+    columns:
+      - name: report_date
+        tests:
+          - not_null
+      - name: symbol
+        tests:
+          - not_null
+      - name: daily_variation
