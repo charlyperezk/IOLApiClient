@@ -1,11 +1,12 @@
 from dataclasses import dataclass, replace
-from typing import Any, AsyncGenerator, Dict, Optional
+from typing import Any, Dict, Optional
 
-from ..entities import Extraction, Request
-from ..interfaces import ExtractionService, RequestBuilder
+from .entities import Extraction, Request
+from .interfaces import RequestBuilder
 
 
 DEFAULT_PAGING_INDEX = "paging"
+DEFAULT_SCROLL_ID_INDEX = "scroll_id"
 
 
 def _coerce_int(value: Any) -> Optional[int]:
@@ -66,44 +67,59 @@ def _apply_paging(request: Request, paging: Dict[str, Any]) -> Optional[Request]
     return new_request
 
 
+@dataclass
 class PagingRequestBuilder(RequestBuilder):
     """Generaliza la lógica de iterar scroll/venedor con cualquier RequestGenerator."""
+    paging_index: str = DEFAULT_PAGING_INDEX
+
     def build(
         self,
         last_extraction: Extraction,
-        paging_index: str = DEFAULT_PAGING_INDEX,
     ) -> Optional[Request]:
         if not last_extraction.success:
             return
 
-        paging = _read_paging(last_extraction.data, paging_index)
+        paging = _read_paging(last_extraction.data, self.paging_index)
         if not paging:
             return
 
         return _apply_paging(last_extraction.request, paging)
 
 
+def _apply_scroll_token(request: Request, key: str, token: str) -> Request:
+    """Incluye el token de scroll en los params y en el JSON del request."""
+    params = {**request.params, key: token}
+    return replace(request, params=params)
+
+
+def _read_scroll_token(data: Any, path: str) -> Optional[str]:
+    if not path or not isinstance(data, dict):
+        return None
+    current: Any = data
+    for part in path.split("."):
+        if not isinstance(current, dict):
+            return None
+        current = current.get(part)
+    return str(current) if current is not None else None
+
+
 @dataclass
-class GeneratedPagingExtraction:
-    req_builder: RequestBuilder
-
-    async def paginate(
+class ScrollRequestBuilder(RequestBuilder):
+    """Generaliza la lógica de iterar scroll/venedor con cualquier RequestGenerator."""
+    scroll_id_index: str = DEFAULT_SCROLL_ID_INDEX
+    
+    
+    def build(
         self,
-        service: ExtractionService,
-        seller_id: str,
-        request: Request,
-        paging_index: str,
-    ) -> AsyncGenerator[Extraction, None]:
-        current_run = await service.extract(seller_id, request)
-        yield current_run
+        last_extraction: Extraction
+    ) -> Optional[Request]:
+        if not last_extraction.success:
+            return
 
-        while True:
-            next_request = self.req_builder.build(
-                last_extraction=current_run,
-                paging_index=paging_index,
-            )
-            if not next_request:
-                break
+        scroll_token = _read_scroll_token(last_extraction.data, self.scroll_id_index)
+        if not scroll_token:
+            return
 
-            current_run = await service.extract(seller_id, next_request)
-            yield current_run
+        return _apply_scroll_token(
+            last_extraction.request, self.scroll_id_index, scroll_token
+        )

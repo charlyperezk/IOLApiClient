@@ -40,13 +40,13 @@ class IOLTokenProvider(AccessTokenProvider[str]):
             obtained_at=datetime.now()
         )
 
-    def auth(self, identifier: str) -> AccessToken:
+    async def auth(self, identifier: str) -> AccessToken:
         username, password = self._get_credentials(identifier)
         auth_request = AuthenticateRequest.new(username=username, password=password)
-        response = self._client._request(auth_request)
+        response = await self._client._request(auth_request)
         return self._build_token_from_response(response)
 
-    def refresh(self, identifier: str, refresh_token: str) -> AccessToken:
+    async def refresh(self, identifier: str, refresh_token: str) -> AccessToken:
         refresh_request = RefreshTokenRequest.new(refresh_token=refresh_token)
-        response = self._client._request(refresh_request)
+        response = await self._client._request(refresh_request)
         return self._build_token_from_response(response)
