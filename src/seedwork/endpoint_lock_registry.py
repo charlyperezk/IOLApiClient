@@ -6,7 +6,7 @@ from typing import Dict
 import httpx
 import re
 
-from src.meli.constants import ENDPOINT_LOCK_NORMALIZATION_RULES
+from src.seedwork.settings import ENDPOINT_LOCK_NORMALIZATION_RULES
 
 
 class EndpointLockRegistry:

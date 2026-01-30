@@ -1,7 +1,7 @@
 import logging
 from pathlib import Path
 
-from src.meli.constants import DEBUG
+from src.seedwork.settings import DEBUG
 
 LOG_FORMAT = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
 LOG_LEVEL = logging.DEBUG if DEBUG else logging.INFO

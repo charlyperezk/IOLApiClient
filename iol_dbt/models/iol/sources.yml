@@ -1,0 +1,8 @@
+version: 2
+
+sources:
+  - name: iol
+    schema: iol
+    tables:
+      - name: iol_portfolio_raw_snapshots
+        description: "Raw portfolio snapshots ingested from IOL."

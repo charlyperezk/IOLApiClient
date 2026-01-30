@@ -1,6 +1,5 @@
 from contextlib import contextmanager
 import importlib
-import os
 from typing import Callable, Iterator, Optional
 
 from sqlalchemy import MetaData, create_engine, text
@@ -13,31 +12,25 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 from sqlalchemy.orm import Session, declarative_base, sessionmaker
-from sqlalchemy.pool import NullPool
+from .settings import MODEL_MODULES, DB_SCHEMA, DATABASE_URL, ASYNC_DATABASE_URL
 
-_SCHEMA_NAME: Optional[str] = "bi"
-_METADATA = MetaData()
+_SCHEMA_NAME: Optional[str] = DB_SCHEMA
+_METADATA = MetaData(schema=DB_SCHEMA)
 Base = declarative_base(metadata=_METADATA)
 
-_DEFAULT_POOL_SIZE = 10
-
-_MODEL_MODULES = (
-    "src.seedwork.access_token_repo",
-    "src.seedwork.repositories",
-    "src.meli.scan_run.repositories",
-    "src.meli.items.models",
-    "src.meli.sellers.models",
-    "src.meli.user_products.models",
-    "src.meli.orders.models",
-)
-
-
 def _ensure_model_modules_loaded() -> None:
-    for module in _MODEL_MODULES:
-        importlib.import_module(module)
+    for module in MODEL_MODULES:
+        try:
+            importlib.import_module(module)
+        except ModuleNotFoundError as exc:
+            if exc.name == module:
+                continue
+            raise
 
-DATABASE_URL = os.getenv("DATABASE_URL", "")
-ASYNC_DATABASE_URL = os.getenv("ASYNC_DATABASE_URL", DATABASE_URL)
+_SYNC_ENGINE: Optional[Engine] = None
+_ASYNC_ENGINE: Optional[AsyncEngine] = None
+_SESSION_FACTORY: Optional[sessionmaker[Session]] = None
+_ASYNC_SESSION_FACTORY: Optional[async_sessionmaker[AsyncSession]] = None
 
 
 def init_database(engine: Engine) -> None:
@@ -55,7 +48,6 @@ def init_database(engine: Engine) -> None:
 def create_async_engine_instance(url: str = ASYNC_DATABASE_URL) -> AsyncEngine:
     return create_async_engine(
         url,
-        poolclass=NullPool,
         future=True,
     )
 
@@ -74,9 +66,6 @@ def create_async_session_factory(
 def create_engine_instance(url: str = DATABASE_URL) -> Engine:
     return create_engine(
         url,
-        pool_size=_DEFAULT_POOL_SIZE,
-        max_overflow=0,
-        pool_pre_ping=True,
         future=True,
     )
 
@@ -96,6 +85,48 @@ def get_async_session(async_session_factory: async_sessionmaker[AsyncSession]) -
 
 def get_session(session_factory: sessionmaker[Session]) -> Session:
     return session_factory()
+
+
+def get_engine() -> Engine:
+    global _SYNC_ENGINE
+    if _SYNC_ENGINE is None:
+        _SYNC_ENGINE = create_engine_instance(DATABASE_URL)
+        init_database(_SYNC_ENGINE)
+    return _SYNC_ENGINE
+
+
+def get_async_engine() -> AsyncEngine:
+    global _ASYNC_ENGINE
+    if _ASYNC_ENGINE is None:
+        _ASYNC_ENGINE = create_async_engine_instance(ASYNC_DATABASE_URL)
+    return _ASYNC_ENGINE
+
+
+def get_session_factory() -> sessionmaker[Session]:
+    global _SESSION_FACTORY
+    if _SESSION_FACTORY is None:
+        _SESSION_FACTORY = create_session_factory(get_engine())
+    return _SESSION_FACTORY
+
+
+def get_async_session_factory() -> async_sessionmaker[AsyncSession]:
+    global _ASYNC_SESSION_FACTORY
+    if _ASYNC_SESSION_FACTORY is None:
+        _ASYNC_SESSION_FACTORY = create_async_session_factory(get_async_engine())
+    return _ASYNC_SESSION_FACTORY
+
+
+async def init_database_async(engine: AsyncEngine) -> None:
+    await _ensure_schema_async(engine)
+    _ensure_model_modules_loaded()
+    try:
+        async with engine.begin() as connection:
+            await connection.run_sync(Base.metadata.create_all)
+    except (OperationalError, ProgrammingError) as exc:
+        message = str(exc).lower()
+        if "already exists" in message:
+            return
+        raise
 
 
 def set_schema(schema: Optional[str]) -> None:
@@ -119,6 +150,23 @@ def _ensure_schema(engine: Engine) -> None:
         with engine.connect() as connection:
             connection.execute(statement)
             connection.commit()
+    except OperationalError as exc:
+        message = str(exc).lower()
+        if "already exists" in message:
+            return
+        raise
+
+
+async def _ensure_schema_async(engine: AsyncEngine) -> None:
+    if not _SCHEMA_NAME:
+        return
+    if engine.dialect.name == "sqlite":
+        return
+    schema_safe = _SCHEMA_NAME.replace('"', '""')
+    statement = text(f'CREATE SCHEMA IF NOT EXISTS "{schema_safe}"')
+    try:
+        async with engine.begin() as connection:
+            await connection.execute(statement)
     except OperationalError as exc:
         message = str(exc).lower()
         if "already exists" in message:

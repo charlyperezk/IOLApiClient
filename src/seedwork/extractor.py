@@ -9,7 +9,7 @@ from .interfaces import Extractor, AuthService, HttpClient
 from .logging import get_logger
 from .value_objects import APIResponse
 
-from src.meli.tokens.exceptions import EmptyTokenResponse
+from src.seedwork.exceptions import EmptyTokenResponse
 
 logger = get_logger(__name__)
 

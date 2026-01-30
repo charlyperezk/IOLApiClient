@@ -1,0 +1,19 @@
+version: 2
+
+models:
+  - name: stg_iol_portfolio_raw
+    description: "Raw snapshots staged for downstream models."
+    columns:
+      - name: snapshot_id
+        tests:
+          - not_null
+
+  - name: fct_iol_portfolio_assets
+    description: "Flattened portfolio assets per snapshot."
+    columns:
+      - name: snapshot_id
+        tests:
+          - not_null
+      - name: symbol
+        tests:
+          - not_null

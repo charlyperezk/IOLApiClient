@@ -6,7 +6,7 @@ from src.seedwork.interfaces import AccessTokenProvider, AccessToken, HttpClient
 from src.seedwork.value_objects import APIResponse
 
 from src.iol.constants import ACCESS_TOKEN_DEFAULT_LIFETIME
-from src.iol.auth.accounts import ACCOUNTS, PASSWORDS
+from src.iol.auth.accounts import get_credentials
 from src.iol.resources import AuthenticateRequest, RefreshTokenRequest
 
 
@@ -15,9 +15,7 @@ class IOLTokenProvider(AccessTokenProvider[str]):
     _client: HttpClient
 
     def _get_credentials(self, identifier: str) -> Tuple[str, str]:
-        username = ACCOUNTS.get(identifier, None)
-        password = PASSWORDS.get(identifier, None)
-
+        username, password = get_credentials(identifier)
         if not username or not password:
             raise ValueError("Account not found")
 

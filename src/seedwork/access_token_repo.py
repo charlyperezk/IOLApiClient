@@ -5,6 +5,7 @@ from typing import Callable, Optional
 
 import redis.asyncio as aioredis
 from sqlalchemy import Column, DateTime, Integer, String, Text
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy.orm import Session
 
 from .database import Base
@@ -58,6 +59,37 @@ class SQLAlchemyAccessTokenRepo(AccessTokenRepo[str]):
             )
             session.merge(model)
             session.commit()
+
+
+class AsyncSQLAlchemyAccessTokenRepo(AccessTokenRepo[str]):
+    """Async SQLAlchemy-backed repository for caching access tokens per identifier."""
+
+    def __init__(self, session_factory: async_sessionmaker[AsyncSession]) -> None:
+        self._session_factory = session_factory
+
+    async def get(self, identifier: str) -> Optional[AccessToken]:
+        async with self._session_factory() as session:
+            token_model = await session.get(AccessTokenModel, identifier)
+            if token_model is None:
+                return None
+            return AccessToken(
+                life_time=token_model.life_time,
+                value=token_model.value,
+                refresh_token=token_model.refresh_token,
+                obtained_at=token_model.obtained_at,
+            )
+
+    async def save(self, identifier: str, token: AccessToken) -> None:
+        async with self._session_factory() as session:
+            model = AccessTokenModel(
+                identifier=identifier,
+                value=token.value,
+                refresh_token=token.refresh_token,
+                life_time=token.life_time,
+                obtained_at=token.obtained_at,
+            )
+            await session.merge(model)
+            await session.commit()
 
 
 class RedisBackedAccessTokenRepo(AccessTokenRepo[str]):
