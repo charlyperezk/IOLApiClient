@@ -97,10 +97,16 @@ async def fetch_distribution(
 def build_pie_chart(data: list[tuple[str, float]], output_path: Path) -> None:
     labels = [label for label, _ in data]
     values = [value for _, value in data]
-    fig, ax = plt.subplots(figsize=(6, 4), dpi=150)
-    ax.pie(values, labels=labels, autopct="%1.1f%%", startangle=140)
+    fig, ax = plt.subplots(figsize=(4.2, 3.2), dpi=150)
+    ax.pie(
+        values,
+        labels=labels,
+        autopct="%1.1f%%",
+        startangle=140,
+        textprops={"fontsize": 8},
+    )
     ax.axis("equal")
-    fig.tight_layout()
+    fig.tight_layout(pad=0.6)
     fig.savefig(output_path, bbox_inches="tight")
     plt.close(fig)
 
@@ -113,8 +119,10 @@ def render_html(
     delta_pct: Optional[float],
     best_asset: Optional[str],
     best_var: Optional[float],
+    best_participation: Optional[float],
     worst_asset: Optional[str],
     worst_var: Optional[float],
+    worst_participation: Optional[float],
     narrative: str,
     pie_chart_path: Path,
 ) -> str:
@@ -136,6 +144,12 @@ def render_html(
     delta_pct_str = f"{delta_pct:+.2f}%" if delta_pct is not None else "n/a"
     best_var_str = f"{best_var:+.2f}%" if best_var is not None else "n/a"
     worst_var_str = f"{worst_var:+.2f}%" if worst_var is not None else "n/a"
+    best_participation_str = (
+        f"{best_participation:.2f}%" if best_participation is not None else "n/a"
+    )
+    worst_participation_str = (
+        f"{worst_participation:.2f}%" if worst_participation is not None else "n/a"
+    )
 
     return f"""
 <!DOCTYPE html>
@@ -175,6 +189,12 @@ def render_html(
       }}
       .chart {{
         margin-top: 20px;
+        text-align: center;
+      }}
+      .chart img {{
+        width: 360px;
+        height: auto;
+        display: inline-block;
       }}
       .footer {{
         margin-top: 20px;
@@ -189,8 +209,8 @@ def render_html(
       <div class="metrics">
         <div class="metric"><strong>Valor total:</strong> {total_value:,.2f}</div>
         <div class="metric"><strong>Variación diaria:</strong> {delta_value:+,.2f} ({delta_pct_str})</div>
-        <div class="metric"><strong>Mejor activo:</strong> {best_asset or "n/a"} ({best_var_str})</div>
-        <div class="metric"><strong>Peor activo:</strong> {worst_asset or "n/a"} ({worst_var_str})</div>
+        <div class="metric"><strong>Mejor activo:</strong> {best_asset or "n/a"} ({best_var_str}, {best_participation_str})</div>
+        <div class="metric"><strong>Peor activo:</strong> {worst_asset or "n/a"} ({worst_var_str}, {worst_participation_str})</div>
       </div>
       <div class="narrative">{narrative}</div>
       <div class="chart">
@@ -203,12 +223,14 @@ def render_html(
 """
 
 
-def parse_top_asset(items: list[dict[str, Any]], best: bool = True) -> tuple[Optional[str], Optional[float]]:
+def parse_top_asset(
+    items: list[dict[str, Any]], best: bool = True
+) -> tuple[Optional[str], Optional[float], Optional[float]]:
     if not items:
-        return None, None
+        return None, None, None
     sorted_items = sorted(items, key=lambda x: x.get("daily_variation", 0.0), reverse=best)
     item = sorted_items[0]
-    return item.get("symbol"), item.get("daily_variation")
+    return item.get("symbol"), item.get("daily_variation"), item.get("participation_pct")
 
 
 async def main() -> None:
@@ -225,8 +247,12 @@ async def main() -> None:
     build_pie_chart(distribution, pie_path)
 
     narrative = generate_daily_summary_text(metrics)
-    best_symbol, best_var = parse_top_asset(metrics["top_gainers"], best=True)
-    worst_symbol, worst_var = parse_top_asset(metrics["top_losers"], best=False)
+    best_symbol, best_var, best_participation = parse_top_asset(
+        metrics["top_gainers"], best=True
+    )
+    worst_symbol, worst_var, worst_participation = parse_top_asset(
+        metrics["top_losers"], best=False
+    )
 
     html = render_html(
         report_date=report_date,
@@ -235,8 +261,10 @@ async def main() -> None:
         delta_pct=metrics["delta_pct"],
         best_asset=best_symbol,
         best_var=best_var,
+        best_participation=best_participation,
         worst_asset=worst_symbol,
         worst_var=worst_var,
+        worst_participation=worst_participation,
         narrative=narrative,
         pie_chart_path=pie_path,
     )
