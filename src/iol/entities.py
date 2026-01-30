@@ -15,3 +15,13 @@ class IOLPortfolioRawSnapshot(Base):
     fetched_at = Column(DateTime, nullable=False)
     payload = Column(JSON)
     created_at = Column(DateTime, nullable=False, default=datetime.now)
+
+
+class IOLWatchlistSymbol(Base):
+    __tablename__ = "iol_watchlist_symbols"
+
+    id = Column(Integer, primary_key=True)
+    symbol = Column(String, nullable=False, unique=True)
+    description = Column(String)
+    active = Column(Integer, nullable=False, default=1)
+    created_at = Column(DateTime, nullable=False, default=datetime.now)

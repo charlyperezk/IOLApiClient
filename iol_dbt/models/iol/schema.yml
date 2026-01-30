@@ -17,3 +17,10 @@ models:
       - name: symbol
         tests:
           - not_null
+
+  - name: mart_iol_portfolio_daily
+    description: "Daily portfolio summary from latest snapshot per day."
+    columns:
+      - name: report_date
+        tests:
+          - not_null
